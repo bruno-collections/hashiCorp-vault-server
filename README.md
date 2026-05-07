@@ -41,15 +41,27 @@ vault server -dev
 
 ## Step 2 — Create a Secret in Vault
 
-1. Open `http://127.0.0.1:8200` in your browser.
-2. Log in using the **Root Token** copied from the terminal.
-3. Click **Secrets** in the left sidebar.
-4. Click **Create secret**.
-5. Fill in the form:
-   - **Secret path** — a string name, e.g. `usebruno`
-   - **Secret key** — e.g. `api-key`
-   - **Secret value** — the sensitive value
-6. Click **Save**.
+1. Open `http://127.0.0.1:8200` in your browser. You will see the **Sign in to Vault** page. Select **Token** as the method, paste your Root Token, and click **Sign in**.
+
+   ![Vault login page](assets/01-vault-server-login.png)
+
+2. After logging in, you land on the Dashboard. Under **Secrets engines**, click **secret/** (key/value secret storage).
+
+   ![Click the secret engine](assets/02-click-secret-button.png)
+
+3. You will see the list of existing secrets. Click **Create secret +** in the top-right corner.
+
+   ![Create secret button](assets/03-create-secret.png)
+
+4. Fill in the **Create Secret** form:
+   - **Path for this secret** — enter a path name, e.g. `usebruno`
+   - **Secret data** — enter a key (e.g. `usebruno`) and its value, then click **Add**
+
+   ![Create secret form](assets/04-add-secret.png)
+
+5. Click **Save**. The secret detail page will confirm the secret was created. Note the **API path** shown (e.g. `/v1/secret/data/usebruno`) — you will use this path in Bruno.
+
+   ![Secret saved](assets/05-after-secret.png)
 
 ---
 
@@ -65,6 +77,9 @@ vault server -dev
    - **Namespace** — leave empty for local dev (used for Vault Enterprise namespaces only)
    - **Auth Method** — select **Token** from the dropdown
    - **Token** — paste the Root Token copied from your terminal
+
+   ![Edit Provider dialog in Bruno](assets/06-vault-setting-bruno.png)
+
 5. Click **Test Provider** — you should see a **"Test service provider working fine"** confirmation.
 6. Click **Save**.
 
@@ -72,20 +87,31 @@ vault server -dev
 
 ## Step 4 — Configure the Collection to Use Vault
 
-1. Open **Collection Settings** (use the collection menu).
-2. Go to the **Secret Manager** tab.
-3. Select your Vault provider.
-4. Enter the **Secret Name** and **Secret Path**.
-   - Path must start from `secret/`, e.g. `secret/data/usebruno`
-5. Click **Save**.
+1. Open the **Collection** tab at the top and click on **Secrets**.
+2. From the provider dropdown, select **Vault**.
+
+   ![Select Vault provider in collection](assets/07-select-vault-bruno.png)
+
+3. A row will appear in the **Vault Secrets Provider** table. Fill in:
+   - **Name** — the secret name, e.g. `usebruno`
+   - **Path** — must start with `secret/`, e.g. `secret/data/usebruno`
+
+   ![Vault provider configured in collection](assets/08-provide-vault-name-bruno-collection.png)
+
+4. Click **Save**.
 
 ---
 
 ## Step 5 — Fetch Secrets
 
-1. Click **Fetch Secrets** in the top-left corner of the Bruno window.
-2. In the dialog, select **HashiCorp Vault**.
-3. Click **Fetch** — secrets are pulled automatically and appear in the **Secrets** section of the collection.
+1. Click the **Fetch Secrets** button in the top-right of the Secrets tab.
+2. A **Fetch Secrets** dialog will appear. Select your Vault provider (e.g. `HahsiCopr Vault`) from the **Provider** dropdown.
+
+   ![Fetch Secrets dialog](assets/09-fetch-secrets.png)
+
+3. Click **Fetch**. The secrets are pulled automatically and the **Secrets** column in the table will populate with the fetched secret keys.
+
+   ![Secrets fetched successfully](assets/10-after-fetch-secret.png)
 
 ---
 
@@ -101,21 +127,13 @@ $secrets.<secret-name>.<key-name>
 
 ```json
 {
-  "title": "{{$secrets.usebruno.api-key}}"
+  "title": "{{$secrets.usebruno.usebruno}}"
 }
 ```
 
-The `echo-bru` request in this collection already shows this pattern:
+The `echo-bru` request in this collection already demonstrates this — the secret value is resolved at runtime and returned in the response:
 
-```yaml
-body:
-  type: json
-  data: |-
-    {
-      "title": "{{$secrets.<secret-name>.<key-name>}}",
-      "msg": "The API client developers love most"
-    }
-```
+![Secret used in request body and response](assets/11-use-secrets-scripts.png)
 
 ### In Pre-request / Post-request scripts
 
