@@ -1,0 +1,22 @@
+info:
+  name: echo-bru
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseURL}}"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "{{$secrets.<secret-name>.<key-name>}}",
+        "msg": "The API client developers love most"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
