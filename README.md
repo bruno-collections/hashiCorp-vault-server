@@ -1,24 +1,32 @@
-# HashiCorp Vault — Secret Manager Integration
+# HashiCorp Vault — Bruno v4 Integration
 
-> **Premium Feature** — Requires a **Pro** or **Ultimate** license.
-> [View Bruno pricing](https://www.usebruno.com/pricing)
+> **Premium feature:** HashiCorp Vault integration requires a Bruno **Pro** or
+> **Ultimate** license. [View Bruno pricing](https://www.usebruno.com/pricing).
 
-This collection demonstrates how to use [HashiCorp Vault](https://www.vaultproject.io/) as a secret manager inside Bruno. Secrets fetched from Vault are available across all requests in this collection (see `echo-bru`) via the `$secrets` syntax.
+This collection demonstrates how to retrieve secrets from a local HashiCorp
+Vault server in Bruno v4.
 
----
+## What changed in Bruno v4?
+
+- Secret mappings moved from **Collection  → Secrets** to **Environment → External Secrets**.
+- Configuration is stored in each environment file under `externalSecrets`;
+Bruno no longer reads the collection-level `secrets.json`.
+- The recommended request-field syntax is now `{{secret-name.key-name}}`.
+- The legacy `{{$secrets.secret-name.key-name}}` syntax still works in v4, but
+is deprecated and will be removed in the next major release.
 
 ## Prerequisites
 
-- Bruno **Pro** or **Ultimate** license
-- HashiCorp Vault installed locally (instructions below)
+- Bruno v4 with a **Pro** or **Ultimate** license
+- HashiCorp Vault installed locally
+- An environment selected in Bruno, such as `local`
 
----
-
-## Step 1 — Install & Start Vault
+## Step 1 — Install and start Vault
 
 ### Windows
 
-Run in **PowerShell** or **Command Prompt** (requires [Chocolatey](https://chocolatey.org/)):
+Run in PowerShell or Command Prompt. This requires
+[Chocolatey](https://chocolatey.org/).
 
 ```powershell
 choco install vault
@@ -27,7 +35,7 @@ vault server -dev
 
 ### macOS
 
-Run in **Terminal**:
+Run in Terminal:
 
 ```bash
 brew tap hashicorp/tap
@@ -35,116 +43,157 @@ brew install hashicorp/tap/vault
 vault server -dev
 ```
 
-> After the server starts, the terminal will print a **Root Token** and confirm the server is listening at `http://127.0.0.1:8200`. Keep this terminal open — copy the Root Token, you will need it in the next steps.
+Vault prints a **Root Token** and starts the development server at
+`http://127.0.0.1:8200`. Keep this terminal open and copy the token.
 
----
+> Development mode stores data in memory and is not suitable for production.
 
-## Step 2 — Create a Secret in Vault
+## Step 2 — Create a secret in Vault
 
-1. Open `http://127.0.0.1:8200` in your browser. You will see the **Sign in to Vault** page. Select **Token** as the method, paste your Root Token, and click **Sign in**.
+1. Open `http://127.0.0.1:8200`, select **Token**, paste the Root Token, and
+  click **Sign in**.
+   Vault login page
+2. Under **Secrets engines**, open the `secret/` key/value store.
+  Select the Vault secret engine
+3. Click **Create secret +**.
+  Create secret button
+4. Enter a path such as `usebruno`, then add a key and value.
+  Create secret form
+5. Click **Save**. For the `usebruno` example, the path used in Bruno is
+  `secret/data/usebruno`. Do not include the `/v1/` API prefix.
+   Saved Vault secret
 
-   ![Vault login page](assets/01-vault-server-login.png)
+## Step 3 — Add the Vault account in Bruno
 
-2. After logging in, you land on the Dashboard. Under **Secrets engines**, click **secret/** (key/value secret storage).
+1. Open **Preferences → Secrets Manager**.
+2. Click **+ Add Secret Manager**.
+3. Select **HashiCorp Vault Server**.
+4. Configure the account:
+  - **Name:** `HashiCorp Vault`
+  - **URL:** `http://127.0.0.1:8200`
+  - **Namespace:** leave empty for a local development server
+  - **Auth Method:** **Token**
+  - **Token:** paste the Root Token printed by Vault
+5. Click **Test Connection**.
+6. Click **Add** to save the account.
 
-   ![Click the secret engine](assets/02-click-secret-button.png)
+Bruno v4 also supports **AppRole** and **LDAP** authentication. Token
+authentication is the simplest choice for this local development example;
+AppRole is generally more appropriate for automation and CI/CD.
 
-3. You will see the list of existing secrets. Click **Create secret +** in the top-right corner.
+## Step 4 — Configure External Secrets for an environment
 
-   ![Create secret button](assets/03-create-secret.png)
+Starting in v4, this configuration belongs to an environment rather than the
+collection.
 
-4. Fill in the **Create Secret** form:
-   - **Path for this secret** — enter a path name, e.g. `usebruno`
-   - **Secret data** — enter a key (e.g. `usebruno`) and its value, then click **Add**
+1. Select the `local` environment from the environment selector.
+2. Open the environment editor.
+3. Go to **External Secrets**.
+4. Select **HashiCorp Vault Server**.
+5. Select the Vault account created in Step 3.
+6. Add the secret mapping:
+  - **Name:** `usebruno`
+  - **Path:** `secret/data/usebruno`
+  - **Enabled:** on
+7. Save the environment.
 
-   ![Create secret form](assets/04-add-secret.png)
+The equivalent environment YAML is:
 
-5. Click **Save**. The secret detail page will confirm the secret was created. Note the **API path** shown (e.g. `/v1/secret/data/usebruno`) — you will use this path in Bruno.
-
-   ![Secret saved](assets/05-after-secret.png)
-
----
-
-## Step 3 — Add Vault as a Secret Provider in Bruno
-
-1. Open Bruno and click the **Preferences** icon in the bottom-left corner.
-2. Go to the **Secret Manager** tab.
-3. Click **Add Secret Provider** — an **Edit Provider** dialog will open.
-4. Fill in the fields **one by one** in this order:
-   - **Name** — enter a label for this provider, e.g. `HashiCorp Vault`
-   - **Secret Manager** — select **Vault Server** from the dropdown
-   - **URL** — enter `http://127.0.0.1:8200/`
-   - **Namespace** — leave empty for local dev (used for Vault Enterprise namespaces only)
-   - **Auth Method** — select **Token** from the dropdown
-   - **Token** — paste the Root Token copied from your terminal
-
-   ![Edit Provider dialog in Bruno](assets/06-vault-setting-bruno.png)
-
-5. Click **Test Provider** — you should see a **"Test service provider working fine"** confirmation.
-6. Click **Save**.
-
----
-
-## Step 4 — Configure the Collection to Use Vault
-
-1. Open the **Collection** tab at the top and click on **Secrets**.
-2. From the provider dropdown, select **Vault**.
-
-   ![Select Vault provider in collection](assets/07-select-vault-bruno.png)
-
-3. A row will appear in the **Vault Secrets Provider** table. Fill in:
-   - **Name** — the secret name, e.g. `usebruno`
-   - **Path** — must start with `secret/`, e.g. `secret/data/usebruno`
-
-   ![Vault provider configured in collection](assets/08-provide-vault-name-bruno-collection.png)
-
-4. Click **Save**.
-
----
-
-## Step 5 — Fetch Secrets
-
-1. Click the **Fetch Secrets** button in the top-right of the Secrets tab.
-2. A **Fetch Secrets** dialog will appear. Select your Vault provider (e.g. `HahsiCopr Vault`) from the **Provider** dropdown.
-
-   ![Fetch Secrets dialog](assets/09-fetch-secrets.png)
-
-3. Click **Fetch**. The secrets are pulled automatically and the **Secrets** column in the table will populate with the fetched secret keys.
-
-   ![Secrets fetched successfully](assets/10-after-fetch-secret.png)
-
----
-
-## Using Secrets in Requests
-
-Once fetched, secrets are available everywhere inside the collection using the pattern:
-
-```
-$secrets.<secret-name>.<key-name>
+```yaml
+name: local
+variables:
+  - name: baseURL
+    value: https://echo.usebruno.com
+externalSecrets:
+  type: hashicorp-vault-server
+  variables:
+    - name: usebruno
+      path: secret/data/usebruno
+      enabled: true
 ```
 
-### In request body / headers / query params (template syntax)
+Each Bruno environment has its own `externalSecrets` block, so development,
+staging, and production can use different Vault accounts and paths.
+
+## Step 5 — Fetch secrets
+
+1. Open **Environment → External Secrets**.
+2. Click **Fetch Secrets** in the top-right corner.
+3. Verify that the fetched keys and values appear in the **Secret Keys**
+  column.
+
+Fetching again replaces the current fetched values.
+
+## Use secrets in requests
+
+External secrets can be referenced in request URLs, headers, query parameters,
+bodies, and authentication fields.
+
+### Recommended Bruno v4 syntax
 
 ```json
 {
-  "title": "{{$secrets.usebruno.usebruno}}"
+  "title": "{{usebruno.usebruno}}"
 }
 ```
 
-The `echo-bru` request in this collection already demonstrates this — the secret value is resolved at runtime and returned in the response:
+The pattern is:
 
-![Secret used in request body and response](assets/11-use-secrets-scripts.png)
-
-### In Pre-request / Post-request scripts
-
-```javascript
-const apiKey = bru.getSecretVar('usebruno.api-key');
-req.setHeaders('x-api-key: ' + apiKey);
+```text
+{{<secret-name>.<key-name>}}
 ```
 
----
+### Legacy syntax
 
-## Further Reading
+The following syntax still resolves in Bruno v4, but it is deprecated:
 
-- [Using secrets in Bruno](https://docs.usebruno.com/secrets-management/secret-managers/hashicorp-vault/using-secrets)
-- [HashiCorp Vault overview (Bruno docs)](https://docs.usebruno.com/secrets-management/secret-managers/hashicorp-vault/overview)
+```text
+{{$secrets.usebruno.usebruno}}
+```
+
+Bruno underlines legacy references in the editor. Update them to the v4 syntax
+before the next major release.
+
+### Pre-request and post-request scripts
+
+The script API remains unchanged:
+
+```javascript
+const value = bru.getSecretVar('usebruno.usebruno');
+req.setHeaders('x-api-key: ' + value);
+```
+
+## Migrating an existing pre-v4 collection
+
+1. Ensure `secrets.json` is writable.
+2. Open the collection in the Bruno v4 app.
+3. Bruno automatically migrates its configuration into the relevant
+  environment file.
+4. Verify the mappings under **Environment → External Secrets**.
+5. Replace `{{$secrets.name.key}}` references with `{{name.key}}`.
+6. Commit the updated environment file.
+7. After verification, delete the obsolete `secrets.json`.
+
+The Bruno CLI does not perform this migration. Open the collection in the app
+first. If the CLI finds `secrets.json` without a migrated `externalSecrets`
+block, it warns and continues without those secrets.
+
+## CLI and CI
+
+Export a configured provider from **Preferences → Secrets Manager** as a
+`.env` file, then pass it to the CLI:
+
+```bash
+bru run collection/ --env local --secrets-env-file ./secrets.env
+```
+
+The exported file contains credentials in plain text. Add it to `.gitignore`
+and never commit it.
+
+## Further reading
+
+- [Bruno v4 Secret Manager migration guide](https://docs.usebruno.com/secrets-management/secret-managers/migration)
+- [Add a HashiCorp Vault provider](https://docs.usebruno.com/secrets-management/secret-managers/hashicorp-vault/adding-a-secret-provider)
+- [Configure and fetch Vault secrets](https://docs.usebruno.com/secrets-management/secret-managers/hashicorp-vault/configuring-and-fetching-secrets)
+- [Use Vault secrets](https://docs.usebruno.com/secrets-management/secret-managers/hashicorp-vault/using-secrets)
+
