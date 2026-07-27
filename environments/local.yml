@@ -2,3 +2,6 @@ name: local
 variables:
   - name: baseURL
     value: https://echo.usebruno.com
+externalSecrets:
+  type: hashicorp-vault-server
+  variables: []
