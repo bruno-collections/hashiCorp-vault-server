@@ -10,7 +10,7 @@ http:
     type: json
     data: |-
       {
-        "title": "{{$secrets.usebruno.usebruno}}",
+        "title": "{{secret.access_key}}",
         "msg": "The API client developers love most"
       }
   auth: inherit
